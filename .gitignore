@@ -1,0 +1,33 @@
+# cpp compilation artifacts
+*.o
+*.d
+*.d.*
+
+# latex
+*.aux
+*.bbl
+*.blg
+*.idx
+*.ilg
+*.ind
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+
+# bibtex
+*.bbl
+*.blg
+
