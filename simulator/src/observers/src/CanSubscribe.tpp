@@ -1,0 +1,4 @@
+#ifndef CAN_SUBSCRIBE_TPP
+#define CAN_SUBSCRIBE_TPP
+
+#endif

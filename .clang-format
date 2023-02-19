@@ -1,0 +1,14 @@
+BasedOnStyle: LLVM
+
+AlwaysBreakTemplateDeclarations: Yes
+
+BreakBeforeBraces: Custom
+
+LambdaBodyIndentation: OuterScope
+
+BraceWrapping:
+  AfterClass: true
+
+AlignConsecutiveAssignments: true
+
+AlignAfterOpenBracket: Align

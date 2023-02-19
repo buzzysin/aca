@@ -1,7 +1,12 @@
+# 
+.*/**
+!.vscode
+
 # cpp compilation artifacts
 *.o
 *.d
 *.d.*
+build
 
 # latex
 *.aux
@@ -26,8 +31,4 @@
 *.fdb_latexmk
 *.synctex.gz
 *.synctex(busy)
-
-# bibtex
-*.bbl
-*.blg
 

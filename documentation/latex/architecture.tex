@@ -1,10 +1,16 @@
-\documentclass{article}
+\documentclass[a4paper,11pt]{article}
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
+\usepackage[landscape,left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{multicol}
+
+\graphicspath{{../}}
+
+\def\myArch{MyArch~}
 
 \hypersetup{
   colorlinks=true,
@@ -13,16 +19,91 @@
   urlcolor=cyan,
 }
 
-\title{Unsafe - A Simulator for a RISC-y Architecture}
+\makeatletter
+\newcommand{\enablecolumns}{
+  \begin{multicols}{2}
+}
+\newcommand{\disablecolumns}{
+  \end{multicols}
+}
+\makeatother
+
+\title{\myArch -- A Simulator for a RISC-y Architecture}
+\author{Taharka Okai}
 
 \begin{document}
+
 \begin{titlepage}
-  \maketitle
+  \centering
+
+  \makeatletter
+
+  \vfill
+
+  \includegraphics[height=2cm]{graphics/logo-uob.png}
+
+  \vspace*{2cm}
+
+  {\LARGE\textbf{COMSM0053 Advanced Computer Architecture}}
+
+  \vspace*{2cm}
+
+  {\Large\textbf{\@title}}
+
+  \vspace*{2cm}
+
+  {\large
+  
+  \begin{tabular}{lr}
+    Student Name & \textbf{\@author~(zp19374)} \\
+    Student ID & \textbf{1815919} \\
+  \end{tabular}
+  }
+
+  \vspace*{2cm}
+
+  \vfill
+
+  \makeatother
 \end{titlepage}
+
+\enablecolumns
 
 \section{Introduction}
 
-\section{Architecture}
+\section{Architecture Features}
+\label{sec:Architecture Features}
 
- 
+\subsection{Addressing Modes}
+\label{subsec:Addressing Modes}
+
+This architecture supports the following addressing modes:
+\begin{itemize}
+  \item [--] \texttt{reg} - Register addressing mode
+  \item [--] \texttt{imm} - Immediate addressing mode
+\end{itemize}
+
+\section{Instruction Set}
+\label{sec:Instruction Set}
+
+\subsection{Instruction Structure}
+\label{subsec:Instruction Structure}
+
+\subsection{Arithmetic}
+\label{subsec:Arithmetic}
+
+\subsubsection{\texttt{add}}
+\label{subsubsec:add}
+
+\subsubsection{\texttt{sub}}
+\label{subsubsec:sub}
+
+\subsubsection{\texttt{mul}}
+\label{subsubsec:mul}
+
+\subsubsection{\texttt{div}}
+\label{subsubsec:div}
+
+\disablecolumns
+
 \end{document}

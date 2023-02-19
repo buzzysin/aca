@@ -1,3 +1,12 @@
 {
-  "cmake.sourceDirectory": "${workspaceFolder}/simulator"
+  // CMake extension
+  "cmake.sourceDirectory": "${workspaceFolder}/simulator",
+  "cmake.buildDirectory": "${workspaceFolder}/simulator/build",
+  "cmake.exportCompileCommandsFile": true,
+  "cmake.clearOutputBeforeBuild": true,
+  "makefile.clearOutputBeforeBuild": true,
+  "cmake.launchBehavior": "breakAndReuseTerminal",
+  "cmake.loadCompileCommands": true,
+  "C_Cpp.errorSquiggles": "enabled",
+  "C_Cpp.autoAddFileAssociations": false
 }
