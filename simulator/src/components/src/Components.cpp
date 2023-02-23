@@ -1,6 +1,0 @@
-#ifndef COMPONENTS_CPP
-#define COMPONENTS_CPP
-
-
-
-#endif // COMPONENTS_CPP

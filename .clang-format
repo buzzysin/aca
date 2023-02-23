@@ -12,3 +12,10 @@ BraceWrapping:
 AlignConsecutiveAssignments: true
 
 AlignAfterOpenBracket: Align
+
+NamespaceIndentation: All
+
+BinPackArguments: No
+BinPackParameters: No
+
+IndentPPDirectives: AfterHash

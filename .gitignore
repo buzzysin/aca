@@ -32,3 +32,4 @@ build
 *.synctex.gz
 *.synctex(busy)
 
+bin
