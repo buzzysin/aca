@@ -4,161 +4,295 @@
 #include <TkArch/Debug.h>
 #include <TkArch/ISA.h>
 #include <TkArch/Signals.h>
+#include <TkArch/Types.h>
 
-#include "Clocked.h"
-#include "Connected.h"
-
-class control_unit : public virtual clocked, public virtual connected
+class control_unit : public subscription_manager
 {
 public:
   enum state_t {
+    HALT,            // enable halt
     FETCH_PC_MAR,    // enable pc
     FETCH_MAR_MEM,   // enable mar, mem
-    FETCH_MEM_IR,    // enable mbr
+    FETCH_MBR_IR,    // enable mbr
     FETCH_IR_DECODE, // enable ir
-    DECODE,          // todo (reset)
-    EXECUTE,         // todo (reset)
-    HALT,            // enable halt
-    INIT
+    DECODE,          // todo (halt)
+    EXECUTE,         // todo (halt)
+    INIT             // inital state
   };
 
+  std::vector<std::string> state_names = {"HALT",
+                                          "FETCH_PC_MAR",
+                                          "FETCH_MAR_MEM",
+                                          "FETCH_MBR_IR",
+                                          "FETCH_IR_DECODE",
+                                          "DECODE",
+                                          "EXECUTE",
+                                          "INIT"};
+
 protected:
-  state_t _state = INIT;
-  std::vector<sp<service<isa::logic_t>>> _outputs;
+  state_t _state = INIT, _next_state = INIT;
 
 public:
-  sp<service<isa::logic_t>> in_clock{0};
-  sp<service<isa::data_t>> in_opcode{0};
+  sp<signal<isa::logic_t>> out_pc;
+  sp<signal<isa::logic_t>> out_pc_clk;
+  sp<signal<isa::logic_t>> out_pc_inc;
 
-  sp<service<isa::logic_t>> out_oe_alu{0};   // enable alu output
-  sp<service<isa::logic_t>> out_oe_pc{0};    // enable pc output
-  sp<service<isa::logic_t>> out_oe_ir_op{0}; // enable ir output opcode
-  sp<service<isa::logic_t>> out_oe_ir_ad{0}; // enable ir output address
-  sp<service<isa::logic_t>> out_oe_mem{0};   // enable mem output
-  sp<service<isa::logic_t>> out_oe_mar{0};   // enable mar output
-  sp<service<isa::logic_t>> out_oe_mbr{0};   // enable mbr output
-  sp<service<isa::logic_t>> out_halt{0}; // enable halt output (clock will halt)
+  sp<signal<isa::logic_t>> out_mar;
+  sp<signal<isa::logic_t>> out_mar_clk;
+  sp<signal<isa::logic_t>> out_mar_load;
 
-  sp<service<isa::data_t>> out_pc_mode{0};  // 0 = inc, 1 = load
-  sp<service<isa::data_t>> out_alu_mode{0}; // based on opcode
+  sp<signal<isa::logic_t>> out_mem;
+  sp<signal<isa::logic_t>> out_mem_clk;
+  sp<signal<isa::logic_t>> out_mem_load;
 
+  sp<signal<isa::logic_t>> out_mbr;
+  sp<signal<isa::logic_t>> out_mbr_clk;
+  sp<signal<isa::logic_t>> out_mbr_load;
+
+  sp<signal<isa::logic_t>> out_ir;
+  sp<signal<isa::logic_t>> out_ir_clk;
+  sp<signal<isa::logic_t>> out_ir_load;
+
+  sp<signal<isa::logic_t>> out_halt;
+
+  sp<signal<isa::logic_t>> in_clock;
+
+  std::vector<sp<signal<isa::logic_t>>> out_signals;
+
+public:
   control_unit() {
-    in_clock  = std::make_shared<service<isa::logic_t>>(0);
-    in_opcode = std::make_shared<service<isa::data_t>>(0);
+    out_pc     = new_sp<signal<isa::logic_t>>(0);
+    out_pc_clk = new_sp<signal<isa::logic_t>>(0);
+    out_pc_inc = new_sp<signal<isa::logic_t>>(0);
 
-    out_oe_alu   = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_pc    = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_ir_op = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_ir_ad = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_mem   = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_mar   = std::make_shared<service<isa::logic_t>>(0);
-    out_oe_mbr   = std::make_shared<service<isa::logic_t>>(0);
-    out_halt     = std::make_shared<service<isa::logic_t>>(0);
+    out_mar      = new_sp<signal<isa::logic_t>>(0);
+    out_mar_clk  = new_sp<signal<isa::logic_t>>(0);
+    out_mar_load = new_sp<signal<isa::logic_t>>(0);
 
-    out_pc_mode  = std::make_shared<service<isa::data_t>>(0);
-    out_alu_mode = std::make_shared<service<isa::data_t>>(0);
+    out_mem      = new_sp<signal<isa::logic_t>>(0);
+    out_mem_clk  = new_sp<signal<isa::logic_t>>(0);
+    out_mem_load = new_sp<signal<isa::logic_t>>(0);
 
-    _outputs = {out_oe_alu,
-                out_oe_pc,
-                out_oe_ir_op,
-                out_oe_ir_ad,
-                out_oe_mem,
-                out_oe_mar,
-                out_oe_mbr,
-                out_halt};
+    out_mbr      = new_sp<signal<isa::logic_t>>(0);
+    out_mbr_clk  = new_sp<signal<isa::logic_t>>(0);
+    out_mbr_load = new_sp<signal<isa::logic_t>>(0);
 
-    watch<isa::logic_t>(in_clock, [this](isa::logic_t clk) {
-      if (clk) {
-        _state = handle_state(_state);
+    out_ir      = new_sp<signal<isa::logic_t>>(0);
+    out_ir_clk  = new_sp<signal<isa::logic_t>>(0);
+    out_ir_load = new_sp<signal<isa::logic_t>>(0);
+
+    out_halt = new_sp<signal<isa::logic_t>>(0);
+
+    in_clock = new_sp<signal<isa::logic_t>>(0);
+
+    out_signals = {out_pc,
+                   out_pc_inc,
+                   out_pc_clk,
+                   out_mar,
+                   out_mar_load,
+                   out_mar_clk,
+                   out_mem,
+                   out_mem_load,
+                   out_mem_clk,
+                   out_mbr,
+                   out_mbr_load,
+                   out_mbr_clk,
+                   out_ir,
+                   out_ir_load,
+                   out_ir_clk,
+                   out_halt};
+
+    setup();
+  }
+
+  void set_outputs(const std::vector<sp<signal<isa::logic_t>>> &outputs,
+                   isa::logic_t value = isa::LOGIC_HIGH) {
+    std::vector<sp<signal<isa::logic_t>>> nots = {};
+
+    for (auto &output : out_signals) {
+      for (auto &out : outputs) {
+        if (output == out) {
+          output->next(value);
+        } else {
+          nots.push_back(output);
+        }
+      }
+    }
+
+    for (auto &not_out : nots) {
+      not_out->next(isa::not_logic(value));
+    }
+  }
+
+  void setup() {
+
+    watch(in_clock, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        _state = next_state(_state);
+        next_outputs(_state);
+
+        create_printer("Control Unit");
+        print_info("State: " + state_names[_state]);
       }
     });
 
-    report_if(out_oe_pc, "CU", "PC Enable", &connected::truthy);
-    report_if(out_oe_mar, "CU", "MAR Enable", &connected::truthy);
-    report_if(out_oe_mem, "CU", "MEM Enable", &connected::truthy);
-    report_if(out_oe_mbr, "CU", " MBR Enable", &connected::truthy);
-    report_if(out_oe_ir_op, "CU", "IR Enable", &connected::truthy);
+    watch(out_pc, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("PC: " + std::to_string(out_pc->value()));
+      }
+    });
+
+    watch(out_pc_clk, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("PC CLK: " + std::to_string(out_pc_clk->value()));
+      }
+    });
+
+    watch(out_pc_inc, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("PC INC: " + std::to_string(out_pc_inc->value()));
+      }
+    });
+
+    watch(out_mar, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MAR: " + std::to_string(out_mar->value()));
+      }
+    });
+
+    watch(out_mar_clk, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MAR CLK: " + std::to_string(out_mar_clk->value()));
+      }
+    });
+
+    watch(out_mem, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MEM: " + std::to_string(out_mem->value()));
+      }
+    });
+
+    watch(out_mem_clk, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MEM CLK: " + std::to_string(out_mem_clk->value()));
+      }
+    });
+
+    watch(out_mbr, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MBR: " + std::to_string(out_mbr->value()));
+      }
+    });
+
+    watch(out_mbr_clk, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("MBR CLK: " + std::to_string(out_mbr_clk->value()));
+      }
+    });
+
+    watch(out_ir, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("IR: " + std::to_string(out_ir->value()));
+      }
+    });
+
+    watch(out_ir_clk, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("IR CLK: " + std::to_string(out_ir_clk->value()));
+      }
+    });
+
+    watch(out_halt, [this](const isa::logic_t &value) {
+      if (value == isa::LOGIC_HIGH) {
+        create_printer("Control Unit");
+        print_info("HALT");
+      }
+    });
   }
 
-  state_t handle_state(state_t state) {
+  state_t next_state(state_t state) {
     switch (state) {
-    case FETCH_PC_MAR:
-      info("CU - FETCH - loading PC into MAR...");
-
-      set_output({out_oe_pc}, 1);
-      return FETCH_MAR_MEM;
-
-    case FETCH_MAR_MEM:
-      info("CU - FETCH - selecting register on address bus...");
-
-      set_output({out_oe_mar, out_oe_mem}, 1);
-      return FETCH_MEM_IR;
-
-    case FETCH_MEM_IR:
-      info("CU - FETCH - loading instruction into IR...");
-
-      set_output({out_oe_mbr}, 1);
-      return FETCH_IR_DECODE;
-
-    case FETCH_IR_DECODE:
-      info("CU - FETCH - Todo: decode instruction...");
-
-      set_output({}, 1);
-      return DECODE;
-
-    case DECODE:
-      set_output({}, 1);
-      return EXECUTE;
-
-    case EXECUTE:
-      set_output({}, 1);
-      return FETCH_PC_MAR;
-
-    case HALT:
-      set_output({out_halt}, 1);
-      return HALT;
-
     case INIT:
-      info("CU - INIT - Initializing control unit...");
-
-      set_output({}, 1);
       return FETCH_PC_MAR;
-
+    case FETCH_PC_MAR:
+      return FETCH_MAR_MEM;
+    case FETCH_MAR_MEM:
+      return FETCH_MBR_IR;
+    case FETCH_MBR_IR:
+      return FETCH_IR_DECODE;
+    case FETCH_IR_DECODE:
+      return DECODE;
+    case DECODE:
+      return EXECUTE;
+    case EXECUTE:
+      return FETCH_PC_MAR;
+    case HALT:
+      return HALT;
     default:
-      set_output({}, 1);
       return INIT;
     }
   }
 
-  /// @brief Sets the output of the control unit. If the service is in the out
-  /// vector, it will be set to value, otherwise it will be set to !value
-  /// @param out The vector of services to set to value
-  /// @param value The value to set the services to
-  void set_output(const std::vector<sp<service<isa::logic_t>>> &new_outputs,
-                  isa::logic_t value) {
-    IGNORE(value);
-    bool done          = false;
-    unsigned int count = new_outputs.size();
+  void next_outputs(state_t state) {
+    create_printer("Control Unit");
+    switch (state) {
+    case INIT:
+      print_info("Initialising Control Unit");
+      set_outputs({});
+      break;
 
-    for (sp<service<isa::logic_t>> output : _outputs) {
-      for (sp<service<isa::logic_t>> new_output : new_outputs) {
-        IGNORE(new_output);
-        IGNORE(output);
-        if (output == new_output) {
-          output->next(value);
-          count--;
-        } else {
-          output->next(!value);
-        }
+    case FETCH_PC_MAR:
+      print_info("FETCH - PC into MAR");
+      // output the pc, load the mar, propogate output
+      set_outputs({out_pc, out_mar_load, out_mar_clk, out_mar});
+      break;
 
-        done = count == 0;
+    case FETCH_MAR_MEM:
+      print_info("FETCH - MAR into MEM");
+      // read memory to bus, propogate output
+      set_outputs({out_mem, out_mem_clk, out_mbr_load, out_mbr_clk});
+      break;
 
-        if (done) {
-          break;
-        }
-      }
+    case FETCH_MBR_IR:
+      print_info("FETCH - MBR into IR");
+      // output the bus, load the ir, propogate output
+      set_outputs({out_mbr, out_ir_load, out_ir_clk});
+      break;
+
+    case FETCH_IR_DECODE:
+      print_info("FETCH - IR into DECODE");
+      // output the ir into the decoder, increment the pc
+      set_outputs({out_ir, out_pc_inc, out_pc_clk});
+      break;
+
+    case DECODE:
+      set_outputs({});
+      break;
+
+    case EXECUTE:
+      set_outputs({});
+      break;
+
+    case HALT:
+      set_outputs({out_halt});
+      break;
+
+    default:
+      set_outputs({});
+      break;
     }
   }
 };
 
-#endif
+#endif // CONTROL_UNIT_H

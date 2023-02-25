@@ -1,19 +1,28 @@
 #ifndef MEMORY_ADDRESS_REGISTER_H
 #define MEMORY_ADDRESS_REGISTER_H
 
-#include "BufferedRegister.h"
+#include <TkArch/ISA.h>
+#include <TkArch/Signals.h>
 
-class mem_addr_reg : public reg_buf
+#include "Register.h"
+
+class memory_address_register : public register_
 {
 public:
-  mem_addr_reg() {
+  memory_address_register() : register_() {
 
-    report_if(in_reset, "Memory Address Register", "Reset", &connected::truthy);
-    report_if(in_load, "Memory Address Register", "Loaded", &connected::truthy);
-    report_if(in_data, "Memory Address Register", "Data", &connected::truthy);
-    report(out_data, "Memory Address Register", "Value");
+    // Just report data changes
+    watch(in_data, [this](isa::data_t data) {
+      create_printer("MemoryAddressRegister");
+      print_info("MemoryAddressRegister received: " + std::to_string((int)data));
+    });
+
+    watch(out_data, [this](isa::data_t data) {
+      create_printer("MemoryAddressRegister");
+      print_info("MemoryAddressRegister sending:" + std::to_string((int)data));
+    });
   }
-  virtual ~mem_addr_reg() {}
+  ~memory_address_register() {}
 };
 
 #endif

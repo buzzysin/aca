@@ -1,32 +1,27 @@
-#ifndef INST_REG_H
-#define INST_REG_H
+#ifndef INSTRUCTION_REGISTER_H
+#define INSTRUCTION_REGISTER_H
 
-#include "BufferedRegister.h"
+#include <TkArch/ISA.h>
 
-class inst_reg_op : public reg_buf
+#include "AddressableRegister.h"
+
+class instruction_register : public register_
 {
 public:
-  inst_reg_op() {
-    report_if(in_reset, "IR (opcode)", "Reset", &connected::truthy);
-    report_if(in_load, "IR (opcode)", "Loaded", &connected::truthy);
-    report_if(in_data, "IR (opcode)", "Data", &connected::truthy);
-    report(out_data, "IR (opcode)", "Value");
+  instruction_register() : register_() {
+
+    // Just report data changes
+    watch(in_data, [this](isa::data_t data) {
+      create_printer("Instruction Register");
+      print_info("Instruction Register received: " + std::to_string((int)data));
+    });
+
+    watch(out_data, [this](isa::data_t data) {
+      create_printer("Instruction Register");
+      print_info("Instruction Register sending:" + std::to_string((int)data));
+    });
   }
-
-  virtual ~inst_reg_op() {}
-};
-
-class inst_reg_addr : public reg_buf
-{
-public:
-  inst_reg_addr() {
-    report_if(in_reset, "IR (address)", "Reset", &connected::truthy);
-    report_if(in_load, "IR (address)", "Loaded", &connected::truthy);
-    report_if(in_data, "IR (address)", "Data", &connected::truthy);
-    report(out_data, "IR (address)", "Value");
-  }
-
-  virtual ~inst_reg_addr() {}
+  ~instruction_register() {}
 };
 
 #endif

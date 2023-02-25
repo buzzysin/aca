@@ -1,16 +1,8 @@
 {
-  "cmake.debugConfig": {
-    "environment": [
-      {
-        "name": "PATH",
-        "value": "${env:PATH}:${command:cmake.getLaunchTargetDirectory}"
-      },
-      {
-        "name": "ASAN_OPTIONS",
-        "value": "allocator_may_return_null=1"
-      }
-    ]
-  },
+  "C_Cpp.default.includePath": [
+    // "${default}",
+    "${workspaceFolder}/include",
+  ],
   "files.associations": {
     "*.svg": "svg",
     "Procfile": "yaml",
@@ -77,6 +69,14 @@
     "mutex": "cpp",
     "semaphore": "cpp",
     "stop_token": "cpp",
-    "thread": "cpp"
+    "thread": "cpp",
+    "cassert": "cpp",
+    "cerrno": "cpp",
+    "cfloat": "cpp",
+    "climits": "cpp",
+    "ios": "cpp",
+    "locale": "cpp",
+    "queue": "cpp",
+    "cstdbool": "cpp"
   }
 }

@@ -1,54 +1,61 @@
 #ifndef COUNTER_H
 #define COUNTER_H
 
-#include "Clocked.h"
-#include "Connected.h"
-#include "Register.h"
+#include <TkArch/Signals.h>
 
-class counter : public virtual clocked, public virtual connected
+class counter : public subscription_manager
 {
 protected:
-  reg _storage;
+  isa::data_t _count{0}, _next_count{0};
 
 public:
-  sp<service<isa::logic_t>> in_reset{0};
-  sp<service<isa::logic_t>> in_load{0};
-  sp<service<isa::data_t>> in_data{0};
+  sp<signal<isa::logic_t>> in_clock;
+  sp<signal<isa::logic_t>> in_reset;
+  sp<signal<isa::logic_t>> in_load;
+  sp<signal<isa::logic_t>> in_inc;
+  sp<signal<isa::data_t>> in_data;
 
-  sp<service<isa::data_t>> in_increment{0};
-
-  sp<service<isa::data_t>> out_data{0};
+  sp<signal<isa::data_t>> out_data;
 
 public:
   counter() {
-    in_reset = std::make_shared<service<isa::logic_t>>(0);
-    in_load  = std::make_shared<service<isa::logic_t>>(0);
-    in_data  = std::make_shared<service<isa::data_t>>(0);
+    in_clock = std::make_shared<signal<isa::logic_t>>(0);
+    in_reset = std::make_shared<signal<isa::logic_t>>(0);
+    in_load  = std::make_shared<signal<isa::logic_t>>(0);
+    in_inc   = std::make_shared<signal<isa::logic_t>>(1);
+    in_data  = std::make_shared<signal<isa::data_t>>(0);
 
-    in_increment = std::make_shared<service<isa::data_t>>(1);
+    out_data = std::make_shared<signal<isa::data_t>>(0);
 
-    out_data = std::make_shared<service<isa::data_t>>(0);
+    setup();
+  }
 
-    redirect(in_clock, _storage.in_clock);
-    redirect(in_reset, _storage.in_reset);
-    redirect(in_load, _storage.in_load);
-    redirect(in_data, _storage.in_data);
+  void setup() {
+    watch(in_clock, [this](isa::logic_t clk) {
+      if (clk) {
+        _count = next_count(_count);
+        next_outputs(_count);
 
-    redirect<isa::data_t>(_storage.out_data, out_data, [&](isa::data_t value) {
-      if (in_increment->value()) {
-        return value + 1;
-      } else {
-        return value - 1;
+        create_printer("Counter");
+        print_info("Count: " + std::to_string(_count));
       }
     });
-
-    // report_if(in_reset, "Counter - Counter reset", &connected::truthy);
-    // report_if(in_load, "Counter - Counter loaded", &connected::truthy);
-    // report_if(in_data, "Counter - Counter received", &connected::truthy);
-    // report_if(
-    //     in_increment, "Counter - Counter incremented", &connected::truthy);
-    // report(out_data, "Counter - Counter value");
   }
+
+  isa::data_t next_count(isa::data_t count) {
+
+    if (in_reset->value()) {
+      count = 0;
+    } else if (in_load->value()) {
+      count = in_data->value();
+    } else if (in_inc->value()) {
+      count++;
+    }
+    return count;
+  }
+
+  void next_outputs(isa::data_t count) { out_data->next(count); }
+
   virtual ~counter() {}
 };
 

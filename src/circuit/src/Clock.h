@@ -4,64 +4,75 @@
 #include <TkArch/Debug.h>
 #include <TkArch/ISA.h>
 #include <TkArch/Signals.h>
+#include <TkArch/Types.h>
 
 #include <thread>
 
-// This class has a weird name because it's a reserved word in C++.
-class clock_
+class clock_ : public subscription_manager
 {
 protected:
+  isa::logic_t _state = isa::LOGIC_LOW;
   std::thread _thread;
-
-  bool _running;
-  bool _halted;
-
-  size_t _cycles;
+  bool _running  = false;
+  bool _halted   = false;
+  size_t _cycles = 0;
 
 public:
-  sp<service<isa::logic_t>> state;
+  sp<signal<isa::logic_t>> state;
 
 public:
-  clock_() {
-    _running = false;
-    _halted  = false;
+  clock_() { state = new_sp<signal<isa::logic_t>>(0); }
 
-    _cycles = 0;
-
-    state = std::make_shared<service<isa::logic_t>>(0);
-  }
-  virtual ~clock_() { state->disconnect(); }
-
-  void tick() { state->next(!state->value()); }
-
-  void cycle() {
-    tick();
-    tick();
-
-    _cycles++;
+  void run() {
+    while (_running) {
+      if (_halted) {
+        _state = isa::LOGIC_LOW;
+      } else {
+        cycle();
+      }
+    }
   }
 
   void start() {
+    create_printer("Clock");
+    print_info("Starting clock");
     _running = true;
-    _halted  = false;
-
-    _thread = std::thread([this]() {
-      while (_running) {
-        if (!_halted) {
-          // std::this_thread::sleep_for(std::chrono::milliseconds(1));
-          info("Initiating new cycle...");
-          cycle();
-        }
-      }
-    });
+    _thread  = std::thread(&clock_::run, this);
   }
 
   void stop() {
+    create_printer("Clock");
+    print_info("Stopping clock");
+
     _running = false;
-    _thread.join();
+
+    if (_thread.joinable())
+      _thread.join();
   }
 
   void halt() { _halted = true; }
+
+  void tick() {
+    _state = _state == isa::LOGIC_LOW ? isa::LOGIC_HIGH : isa::LOGIC_LOW;
+    state->next(_state);
+  }
+
+  void cycle() {
+    create_printer("Clock");
+
+    tick();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    tick();
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    _cycles++;
+
+    print_info("Ticking clock: " + std::to_string(_cycles) +
+               " cycles, state = " + std::to_string(_state));
+  }
+
+  ~clock_() {}
 };
 
 #endif

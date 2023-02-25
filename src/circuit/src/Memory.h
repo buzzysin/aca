@@ -4,57 +4,69 @@
 #include <TkArch/ISA.h>
 #include <TkArch/Signals.h>
 
-#include "Clocked.h"
-#include "Connected.h"
-#include "Register.h"
+#include "AddressableRegister.h"
 
-class memory : public clocked, public virtual connected
+class memory : public subscription_manager
 {
 protected:
-  std::vector<reg> _memory;
+  std::vector<sp<addressable_register>> _registers;
 
 public:
-  sp<service<isa::logic_t>> in_write;
-  sp<service<isa::logic_t>> in_read;
+  sp<signal<isa::logic_t>> in_clock;
+  sp<signal<isa::logic_t>> in_reset;
+  sp<signal<isa::logic_t>> in_load;
+  sp<signal<isa::addr_t>> in_addr;
+  sp<signal<isa::data_t>> in_data;
 
-  sp<service<isa::logic_t>> out_write;
-  sp<service<isa::logic_t>> out_read;
+  sp<signal<isa::data_t>> out_data;
 
-  sp<service<isa::data_t>> addr_bus;
-  sp<service<isa::data_t>> data_bus;
+  isa::addr_t size{0};
 
 public:
-  memory(size_t size) {
-    in_write = std::make_shared<service<isa::logic_t>>(0);
-    in_read  = std::make_shared<service<isa::logic_t>>(0);
+  memory(isa::addr_t size) : size(size) {
+    in_clock = std::make_shared<signal<isa::logic_t>>(0);
+    in_reset = std::make_shared<signal<isa::logic_t>>(0);
+    in_load  = std::make_shared<signal<isa::logic_t>>(0);
+    in_addr  = std::make_shared<signal<isa::addr_t>>(0);
+    in_data  = std::make_shared<signal<isa::data_t>>(0);
 
-    out_write = std::make_shared<service<isa::logic_t>>(0);
-    out_read  = std::make_shared<service<isa::logic_t>>(0);
+    out_data = std::make_shared<signal<isa::data_t>>(0);
 
-    addr_bus = std::make_shared<service<isa::data_t>>(0);
-    data_bus = std::make_shared<service<isa::data_t>>(0);
+    setup();
+  }
 
-    _memory.resize(size);
+  void setup() {
+    for (isa::addr_t i = 0; i < size; i++) {
+      _registers.push_back(new_sp<addressable_register>(i));
+    }
 
-    std::for_each(_memory.begin(), _memory.end(), [&](reg &r) {
-      redirect(in_clock, r.in_clock);
-    });
-
-    watch<isa::logic_t>(in_clock, [this](isa::logic_t clk) {
-      reg registr = _memory[addr_bus->value()];
+    watch(in_clock, [this](isa::logic_t clk) {
       if (clk) {
-        if (in_write->value()) {
-          registr.in_data->next(data_bus->value());
-        } else if (in_read->value()) {
-          data_bus->next(registr.out_data->value());
-        }
+        _registers[in_addr->value()]->in_reset->next(in_reset->value());
+        _registers[in_addr->value()]->in_load->next(in_load->value());
+        _registers[in_addr->value()]->in_data->next(in_data->value());
+        _registers[in_addr->value()]->in_clock->next(in_clock->value());
+
+        out_data->next(_registers[in_addr->value()]->out_data->value());
+
+        create_printer("Memory");
+        print_info("Addr: " + std::to_string(in_addr->value()));
+        print_info("Data: " + std::to_string(out_data->value()));
       }
     });
+  }
 
-    report_if(in_write, "Memory", "Write", &connected::truthy);
-    report_if(in_read, "Memory", "Read", &connected::truthy);
-    report(addr_bus, "Memory", "Address");
-    report(data_bus, "Memory", "Data");
+  virtual ~memory() {}
+
+  void write(isa::addr_t addr, isa::data_t data) {
+    auto reg = _registers[addr];
+
+    reg->in_data->next(data);
+    reg->in_load->next(isa::LOGIC_HIGH);
+    reg->in_clock->next(isa::LOGIC_HIGH);
+    reg->in_clock->next(isa::LOGIC_LOW);
+    reg->in_load->next(isa::LOGIC_LOW);
+    reg->in_data->next(0);
   }
 };
 

@@ -1,18 +1,28 @@
 #ifndef MEMORY_BUFFER_REGISTER_H
 #define MEMORY_BUFFER_REGISTER_H
 
-#include "BufferedRegister.h"
+#include <TkArch/Debug.h>
+#include <TkArch/ISA.h>
+#include <TkArch/Signals.h>
 
-class mem_buf_reg : public reg_buf
+#include "Register.h"
+
+class memory_buffer_register : public register_
 {
 public:
-  mem_buf_reg() {
-    report_if(in_reset, "Memory Buffer Register", "Reset", &connected::truthy);
-    report_if(in_load, "Memory Buffer Register", "Loaded", &connected::truthy);
-    report_if(in_data, "Memory Buffer Register", "Data", &connected::truthy);
-    report(out_data, "Memory Buffer Register", "Value");
+  memory_buffer_register() : register_() {
+    // Just report data changes
+    watch(in_data, [this](isa::data_t data) {
+      create_printer("MemoryBufferRegister");
+      print_info("MemoryBufferRegister received: " + std::to_string((int)data));
+    });
+
+    watch(out_data, [this](isa::data_t data) {
+      create_printer("MemoryBufferRegister");
+      print_info("MemoryBufferRegister sending: " + std::to_string((int)data));
+    });
   }
-  virtual ~mem_buf_reg() {}
+  ~memory_buffer_register() {}
 };
 
 #endif

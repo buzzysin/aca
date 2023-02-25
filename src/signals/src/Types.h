@@ -1,47 +1,58 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef SIGNALS_TYPES_H
+#define SIGNALS_TYPES_H
 
-#include <exception>
 #include <functional>
 #include <memory>
 
-namespace types {
-  template <typename T>
-  using consumer = std::function<void(T)>;
-
-  template <typename T>
-  using next_fn = consumer<T>;
-
-  using error_fn = std::function<void(const std::exception &e)>;
-
-  using complete_fn = std::function<void()>;
-
-  using dc_fn = std::function<void()>;
-
-  template  <typename T, typename U>
-  using mapping = std::function<U(T)>;
-
-  template <typename T>
-  using mono_mapping = std::function<T(T)>;
-
-  template <typename T>
-  using predicate = std::function<bool(T)>;
-
-  
-
-
-  template <typename T>
-  using wp = std::weak_ptr<T>;
-
-  template <typename T>
-  using sp = std::shared_ptr<T>;
-
-} // namespace types
+template <typename T>
+class observer;
 
 template <typename T>
-using wp = types::wp<T>;
+class subscriber;
 
 template <typename T>
-using sp = types::sp<T>;
+class subject;
 
+class subscription;
+
+struct unsubscribable {
+  virtual ~unsubscribable() {
+    // std::cerr << "unsubscribable::~unsubscribable()" << std::endl;
+  }
+  virtual void unsubscribe() = 0;
+};
+
+struct subscription_like : public virtual unsubscribable {
+  virtual ~subscription_like() {
+    // std::cerr << "subscription_like::~subscription_like()" << std::endl;
+  }
+  virtual bool is_closed() const = 0;
+  virtual void unsubscribe()     = 0;
+};
+
+template <typename T>
+struct subscribable {
+  virtual ~subscribable() {
+    // std::cerr << "subscribable::~subscribable()" << std::endl;
+  }
+  virtual sp<subscription> subscribe(sp<observer<T>>) = 0;
+};
+
+template <typename T>
+class observable;
+
+template <typename T>
+class observer_no_throw;
+
+template <typename T>
+class subject;
+
+template <typename T>
+class behaviour_subject;
+
+template <typename T>
+using emitter = subject<T>;
 #endif
+
+template <typename T>
+using signal = behaviour_subject<T>;

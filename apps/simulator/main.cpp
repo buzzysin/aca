@@ -1,15 +1,17 @@
 #include <TkArch/Core.h>
 
+#include "simulator.h"
+
 #include <string>
 
-#include "args.h"
+int main(int n, char ** argv) {
 
-int main(int n, char **argv) {
-  IGNORE(n);
-  IGNORE(argv);
-  
   simulator_args args;
   simulator_get_args(n, argv, args);
 
+  simulator_prompt_generate(args);
+
   simulator(args);
+
+  return 0;
 }

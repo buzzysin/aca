@@ -1,5 +1,5 @@
-#ifndef ARGS_H
-#define ARGS_H
+#ifndef SIMULATOR_H
+#define SIMULATOR_H
 
 #include <fstream>
 #include <iostream>
@@ -13,13 +13,13 @@ struct simulator_args {
   std::string file;
 };
 
-void usage();
-void version();
+void simulator_usage();
+void simulator_version();
 void simulator_get_args(int n, char **argv, simulator_args &args);
 void simulator_prompt_generate(simulator_args &args);
 void simulator(const simulator_args &args);
 
-void usage() {
+void simulator_usage() {
   std::cout << "./Simulator [options]" << printer::newline;
   std::cout << "Options:" << printer::newline;
 
@@ -33,17 +33,19 @@ void usage() {
             << "The file to simulate" << printer::newline;
 }
 
-void version() { std::cout << "Simulator v0.0.1" << printer::newline; }
+void simulator_version() {
+  std::cout << "Simulator v0.0.1" << printer::newline;
+}
 
 void simulator_get_args(int n, char **argv, simulator_args &args) {
 
   for (int i = 1; i < n; i++) {
     std::string arg = argv[i];
     if (arg == "-h" || arg == "--help") {
-      usage();
+      simulator_usage();
       exit(0);
     } else if (arg == "-v" || arg == "--version") {
-      version();
+      simulator_version();
       exit(0);
     } else if (arg == "-f" || arg == "--file") {
       if (i + 1 < n) {
@@ -59,24 +61,21 @@ void simulator_get_args(int n, char **argv, simulator_args &args) {
 }
 
 void simulator_prompt_generate(simulator_args &args) {
-#if DEBUG_MODE
-  IGNORE(args);
-#else
-  std::cout
-      << "No file specified, would you like to generate a new file? [y/N]: ";
+  DEBUG_MODE_ONLY(IGNORE(args));
+  RELEASE_MODE_ONLY(
+      std::cout << "No file specified, would you like to generate a new file? "
+                   "[y/N]: ";
 
-  char input;
+      char input;
+      std::cin.get(input);
 
-  std::cin.get(input);
-
-  if (input == 'y' || input == 'Y') {
-    std::cout << "Generating file..." << printer::newline;
-    args.file = "../programs/vec_add.bin";
-  } else {
-    std::cout << "Exiting..." << printer::newline;
-    exit(0);
-  }
-#endif
+      if (input == 'y' || input == 'Y') {
+        std::cout << "Generating file..." << printer::newline;
+        args.file = "../programs/vec_add.bin";
+      } else {
+        std::cout << "Exiting..." << printer::newline;
+        exit(0);
+      });
 }
 
 void simulator(simulator_args &args) {
@@ -84,21 +83,38 @@ void simulator(simulator_args &args) {
     simulator_prompt_generate(args);
   }
 
-  info("Welcome to the simulator!");
-  info("Press any key to stop the simulation.");
+  create_printer("Simulator");
+
+  print_info("Welcome to the simulator!");
+  print_info("Press any key to stop the simulation.");
 
   std::chrono::milliseconds interval(1000);
   std::this_thread::sleep_for(interval);
 
   processor processor;
 
-  processor.start();
+  unsigned int seed;
 
-  std::cin.get();
+  for (unsigned int i = 0; i < processor.mem.size; i++) {
+    processor.mem.write(i, rand_r(&seed) % 256);
+  }
+
+  while (true) {
+    // std::cout << "step > ";
+    
+    // char c;
+    // c = std::cin.get();
+
+    // if (c == 'q') {
+    //   break;
+    // }
+
+    processor.advance();
+    // std::this_thread::sleep_for(interval);
+  }
 
   processor.stop();
-
-  info("Simulation stopped.");
+  
 
   exit(0);
 }

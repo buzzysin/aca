@@ -1,139 +1,116 @@
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
-#include <TkArch/ISA.h>
+#include <TkArch/Debug.h>
 #include <TkArch/Signals.h>
 
-#include "ALU.h"
-#include "BufferedRegister.h"
 #include "Clock.h"
-#include "Connected.h"
 #include "ControlUnit.h"
-#include "Counter.h"
 #include "InstructionRegister.h"
 #include "Memory.h"
 #include "MemoryAddressRegister.h"
 #include "MemoryBufferRegister.h"
 #include "ProgramCounter.h"
-#include "Register.h"
-#include "StatusRegister.h"
 
-class address_bus;
-class data_bus;
-
-class processor : public virtual connected
+class processor : public subscription_manager
 {
-protected:
-  // Clock
+public:
   clock_ clk;
-
-  // Control Unit
   control_unit cu;
-  // ALU
-  alogic_unit alu;
-
-  // Instruction Register Opcode
-  inst_reg_op ir_op;
-  // Instruction Register Address (for jumps/branches)
-  inst_reg_addr ir_ad;
-
-  // Program Counter
   program_counter pc;
-  // Memory Address Register
-  mem_addr_reg mar;
-  // Memory Buffer Register
-  mem_buf_reg mbr;
-  // Status Register
-  reg_buf sr;
-  // Memory
-  memory mem{0xFF};
+  memory mem{0x10};
+  memory_address_register mar;
+  memory_buffer_register mbr;
+  instruction_register ir;
 
-  // Address Bus
-  sp<service<isa::data_t>> addr_bus;
-  // Data Bus
-  sp<service<isa::data_t>> data_bus_;
+  sp<signal<isa::addr_t>> addr_bus;
+  sp<signal<isa::data_t>> data_bus;
+
+protected:
+  sp<signal<isa::data_t>> out_pc_buf;
+  sp<signal<isa::data_t>> out_mem_buf;
+  sp<signal<isa::data_t>> out_mar_buf;
+  sp<signal<isa::data_t>> out_mbr_buf;
+  sp<signal<isa::data_t>> out_ir_buf;
 
 public:
   processor() {
-    addr_bus  = std::make_shared<service<isa::data_t>>(0);
-    data_bus_ = std::make_shared<service<isa::data_t>>(0);
+    addr_bus = new_sp<signal<isa::addr_t>>(0);
+    data_bus = new_sp<signal<isa::data_t>>(0);
 
-    // Clock
-    watch<bool>(clk.state, [this](bool state) {
-      cu.in_clock->next(state);
-      alu.in_clock->next(state);
-      ir_op.in_clock->next(state);
-      ir_ad.in_clock->next(state);
-      pc.in_clock->next(state);
-      mar.in_clock->next(state);
-      mbr.in_clock->next(state);
-      sr.in_clock->next(state);
-    });
+    out_pc_buf  = new_sp<signal<isa::data_t>>(0);
+    out_mem_buf = new_sp<signal<isa::data_t>>(0);
+    out_mar_buf = new_sp<signal<isa::data_t>>(0);
+    out_mbr_buf = new_sp<signal<isa::data_t>>(0);
+    out_ir_buf  = new_sp<signal<isa::data_t>>(0);
 
-    // Control Unit
-    redirect<isa::logic_t>(cu.out_oe_pc, pc.in_oe_data);
-    redirect<isa::logic_t>(cu.out_oe_alu, alu.in_oe_data);
-    redirect<isa::logic_t>(cu.out_oe_ir_op, ir_op.in_oe_data);
-    redirect<isa::logic_t>(cu.out_oe_ir_ad, ir_ad.in_oe_data);
-    redirect<isa::logic_t>(cu.out_oe_mbr, mbr.in_oe_data);
-    redirect<isa::logic_t>(cu.out_oe_mar, mar.in_oe_data);
-
-    // PC -> MAR
-    redirect<isa::data_t>(pc.out_data, mar.in_data);
-
-    // MAR -> address bus
-    redirect<isa::data_t>(addr_bus, mar.in_data);
-
-    // address bus -> Memory
-    redirect<isa::data_t>(mem.addr_bus, addr_bus);
-
-    // Memory -> Data Bus
-    redirect<isa::data_t>(data_bus_, mem.data_bus);
-
-    // ALU -> data bus
-    redirect<isa::data_t>(alu.out_data, data_bus_);
-
-    // IR (opcode) -> CU
-    redirect<isa::data_t>(ir_op.out_data, cu.in_opcode);
-
-    // IR (address) -> MAR/PC/SP
-    redirect<isa::data_t>(ir_ad.out_data, mar.in_data);
-
-    // MBR -> data bus
-    redirect<isa::data_t>(mar.out_data, addr_bus);
-
-    // MBR -> IR (opcode and address)
-    redirect<isa::data_t>(mbr.out_data, ir_op.in_data);
-    redirect<isa::data_t>(mbr.out_data, ir_ad.in_data);
-
-    report(std::dynamic_pointer_cast<service<isa::data_t>>(addr_bus),
-           "Address Bus",
-           "Received write");
-    report(std::dynamic_pointer_cast<service<isa::data_t>>(data_bus_),
-           "Data Bus",
-           "Received write");
+    setup();
   }
 
-  virtual ~processor() {}
-
   void start() { clk.start(); }
-
   void stop() { clk.stop(); }
-};
+  void halt() { clk.halt(); }
+  void advance() {
+    clk.tick();
+    clk.tick();
+  }
+  ~processor() {}
 
-class address_bus : public virtual service<isa::addr_t>,
-                    public virtual connected
-{
-public:
-  address_bus() : service<isa::addr_t>(0) {}
-  virtual ~address_bus() {}
-};
+protected:
+  void setup() {
+    // Connect clock
+    watch(clk.state, cu.in_clock);
 
-class data_bus : public virtual service<isa::data_t>, public virtual connected
-{
-public:
-  data_bus() : service<isa::addr_t>(0) {}
-  virtual ~data_bus() {}
+    // Program counter (PC)
+    // Clock the PC
+    watch(cu.out_pc_clk, pc.count.in_clock);
+    // Increment the PC
+    watch(cu.out_pc_inc, pc.count.in_inc);
+    // Write the PC output buffer
+    watch(pc.out_data, out_pc_buf);
+    // Write the PC output buffer to the MAR
+    watch(out_pc_buf, mar.in_data, cu.out_pc);
+
+    // Memory address register (MAR)
+    // Clock the MAR
+    watch(cu.out_mar_clk, mar.in_clock);
+    watch(cu.out_mar_load, mar.in_load);
+    // Write the MAR output to buffer
+    watch(mar.out_data, out_mar_buf, cu.out_mar);
+    // Write the MAR output buffer to memory address
+    watch(out_mar_buf, mem.in_addr, cu.out_mar);
+
+    // Memory
+    // Clock the memory
+    watch(cu.out_mem_clk, mem.in_clock);
+    watch(cu.out_mem_load, mem.in_load);
+    // Write the memory output to buffer
+    watch(mem.out_data, out_mem_buf, cu.out_mem);
+    // Write the memory output buffer to MBR
+    watch(out_mem_buf, mbr.in_data, cu.out_mem);
+
+    // Memory buffer register (MBR)
+    // Clock the MBR
+    watch(cu.out_mbr_clk, mbr.in_clock);
+    watch(cu.out_mbr_load, mbr.in_load);
+    // Write the MBR output to buffer
+    watch(mbr.out_data, out_mbr_buf, cu.out_mbr);
+    // Write the MBR output buffer to memory
+    watch(out_mbr_buf, mem.in_data, cu.out_mbr);
+    // Write the MBR output buffer to IR
+    watch(out_mbr_buf, ir.in_data, cu.out_mbr);
+
+    // Instruction register (IR)
+    // Clock the IR
+    watch(cu.out_ir_clk, ir.in_clock);
+    watch(cu.out_ir_load, ir.in_load);
+    // Write the IR output to buffer
+    watch(ir.out_data, out_ir_buf, cu.out_ir);
+    // Write the IR output buffer to program counter
+    watch(out_ir_buf, pc.count.in_data, cu.out_ir);
+
+    // watch(mem.out_data, );
+  }
 };
 
 #endif

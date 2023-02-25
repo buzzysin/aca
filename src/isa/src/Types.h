@@ -2,6 +2,8 @@
 #define ISA_TYPES_H
 
 #include <cstdint>
+#include <functional>
+#include <memory>
 
 // Set address bus size to 4 bits
 #define ADDR_SIZE 4
@@ -13,9 +15,30 @@
 // #define address(addr) ((isa::addr_t)addr)
 
 namespace isa {
-  typedef std::uint32_t addr_t;
-  typedef std::uint32_t data_t;
-  typedef bool logic_t;
+  typedef std::uint8_t addr_t;
+  typedef std::uint8_t data_t;
+  struct logic_t {
+    int value;
+    static const logic_t LOGIC_LOW, LOGIC_HIGH, LOGIC_Z;
+    constexpr logic_t(int value = 1) : value(value) {}
+    // constexpr operator int() const { return value; }
+    constexpr operator bool() const { return value == 2; }
+  };
+  constexpr const logic_t logic_t::LOGIC_LOW  = 0;
+  constexpr const logic_t logic_t::LOGIC_Z    = 1;
+  constexpr const logic_t logic_t::LOGIC_HIGH = 2;
+
+  constexpr const logic_t LOGIC_LOW  = logic_t::LOGIC_LOW;
+  constexpr const logic_t LOGIC_Z    = logic_t::LOGIC_Z;
+  constexpr const logic_t LOGIC_HIGH = logic_t::LOGIC_HIGH;
+
+  static inline logic_t not_logic(logic_t a) {
+    // 2 - 0 = 2
+    // 2 - 1 = 1
+    // 2 - 2 = 0
+    return logic_t(2 - a.value);
+  }
+
 } // namespace isa
 
 #endif // ISA_TYPES_H

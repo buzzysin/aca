@@ -2,26 +2,11 @@
 #define PRINTER_H
 
 #include <cstdint>
+#include <iomanip>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
-
-#ifndef __has_feature
-// GCC does not have __has_feature...
-#  define __has_feature(feature) 0
-#endif
-
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
-#  ifdef __cplusplus
-extern "C"
-#  endif
-    const char *
-    __asan_default_options() {
-  // Clang reports ODR Violation errors in mbedtls/library/certs.c.
-  // NEED TO REPORT THIS ISSUE
-  return "allocator_may_return_null=1";
-}
-#endif
 
 #define IGNORE(x) (void)x
 
@@ -37,12 +22,12 @@ extern "C"
 #  define PRETTY_FUNCTION __func__
 #endif
 
-#define LEVEL_OFF -1
-#define LEVEL_DEBUG 0
-#define LEVEL_INFO 1
-#define LEVEL_WARN 2
-#define LEVEL_ERROR 3
-#define LEVEL_FATAL 4
+#define LEVEL_OFF 0
+#define LEVEL_DEBUG 1
+#define LEVEL_INFO 2
+#define LEVEL_WARN 3
+#define LEVEL_ERROR 4
+#define LEVEL_FATAL 5
 
 #if !defined(PRINTER)
 #  define PRINTER_LEVEL LEVEL_OFF
@@ -112,6 +97,14 @@ namespace printer {
     return normal + str + reset;
   }
 
+  template <typename T>
+  std::string hexify(T i) {
+    std::stringstream ss;
+    ss << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2) << std::hex
+       << (i | 0);
+    return ss.str();
+  }
+
 #ifndef PRINTER_PADDING
 #  define PRINTER_PADDING 25
 #endif
@@ -154,7 +147,8 @@ namespace printer {
   static inline std::string print(std::string _file,
                                   int _line,
                                   std::string _caller,
-                                  std::string message) {
+                                  std::string message,
+                                  std::string custom_header = "") {
     // Fetch colour from cache
     std::string file = _file;
     std::string line = std::to_string(_line);
@@ -165,59 +159,115 @@ namespace printer {
 
     std::string file_name = file.substr(file.find_last_of("/") + 1);
 
-    std::string header = _caller + " @ " + file_name + ":" + line;
+    // We're in regular mode
+    if (custom_header.length() == 0) {
 
-    std::string colour = colours[colour_cache[_caller] % num_colours];
+      std::string header = _caller + " @ " + file_name + ":" + line;
 
-    std::string output = colour + bold + "[ " + align_right(header) + " ]" +
-                         reset + " :: " + message + newline;
+      std::string colour = colours[colour_cache[_caller] % num_colours];
 
-    return output;
+      std::string output = colour + bold + "[ " + align_right(header) + " ]" +
+                           reset + " :: " + message + newline;
+
+      return output;
+    }
+    // We've provided a custom header
+    else {
+      std::string header = custom_header + " @ " + file_name + ":" + line;
+
+      std::string colour = colours[colour_cache[_caller] % num_colours];
+
+      std::string output = colour + bold + "[ " + align_right(header) + " ]" +
+                           reset + " :: " + message + newline;
+
+      return output;
+    }
   }
 
   static inline std::string _debug(std::string _file,
                                    int _line,
                                    std::string _caller,
-                                   std::string message) {
-    return muted + print(_file, _line, _caller, message);
+                                   std::string message,
+                                   std::string custom_header = "") {
+    return muted + print(_file, _line, _caller, message, custom_header);
   }
 
   static inline std::string _info(std::string _file,
                                   int _line,
                                   std::string _caller,
-                                  std::string message) {
-    return underline + print(_file, _line, _caller, message);
+                                  std::string message,
+                                  std::string custom_header = "") {
+    return underline + print(_file, _line, _caller, message, custom_header);
   }
+
+  struct printer_t {
+    std::string file;
+    int line;
+    std::string caller;
+    std::string custom_header;
+
+    printer_t(std::string _file,
+              int _line,
+              std::string _caller,
+              std::string _custom_header = "")
+        : file(_file), line(_line), caller(_caller),
+          custom_header(_custom_header) {}
+
+    std::string operator()(std::string message) {
+      return print(file, line, caller, message, custom_header);
+    }
+  };
 
 } // namespace printer
 
-#if (PRINTER)
+#if defined(PRINTER) && (PRINTER > 0)
 
-#  if (PRINTER_LEVEL <= LEVEL_DEBUG)
+#  define create_printer(name)                                                 \
+    printer::printer_t __printer(                                              \
+        (__FILE__), (__LINE__), (PRETTY_FUNCTION), (name))
+
+#  if (PRINTER_LEVEL >= LEVEL_DEBUG)
 #    define debug_raw(file, line, caller, message)                             \
       std::cerr << printer::_debug((file), (line), (caller), (message))
 #    define debug(message)                                                     \
       debug_raw((__FILE__), (__LINE__), (PRETTY_FUNCTION), (message))
+#    define print_debug(message)                                               \
+      std::cerr << (printer::muted + __printer(message))
 #  else
 #    define debug(message)
 #    define debug_raw(file, line, caller, message)
+#    define print_debug(message)
 #  endif
 
-#  if (PRINTER_LEVEL <= LEVEL_INFO)
+#  if (PRINTER_LEVEL >= LEVEL_INFO)
 #    define info_raw(file, line, caller, message)                              \
       std::cerr << printer::_info((file), (line), (caller), (message))
-#    define info(message)                                                      \
-      info_raw(__FILE__, __LINE__, PRETTY_FUNCTION, message)
+#    define info(message) info_raw(__FILE__, __LINE__, PRETTY_FUNCTION, message)
+#    define print_info(message)                                                \
+      std::cerr << (printer::underline + __printer(message))
 #  else
 #    define info_raw(file, line, caller, message)
 #    define info(message)
+#    define print_info(message)
 #  endif
+#else
+#  define create_printer(name)
+
+#  define debug(message)
+#  define debug_raw(file, line, caller, message)
+#  define print_debug(message)
+
+#  define info_raw(file, line, caller, message)
+#  define info(message)
+#  define print_info(message)
 #endif
 
 #if DEBUG_MODE
 #  define DEBUG_MODE_ONLY(x) x
+#  define RELEASE_MODE_ONLY(x)
 #else
 #  define DEBUG_MODE_ONLY(x)
+#  define RELEASE_MODE_ONLY(x) x
 #endif
 
 #endif

@@ -1,0 +1,8 @@
+#include "ControlUnit.h"
+#include "Counter.h"
+#include "Memory.h"
+#include "MemoryAddressRegister.h"
+#include "MemoryBufferRegister.h"
+#include "Processor.h"
+#include "ProgramCounter.h"
+#include "Register.h"

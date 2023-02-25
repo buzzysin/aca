@@ -21,7 +21,7 @@ if ((CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "RelWithDe
   # add_link_options(-fsanitize=address -fno-omit-frame-pointer)
   add_compile_options(-Wall -Wextra -Wpedantic -Werror)
   add_compile_definitions(DEBUG_MODE=1)
-  add_compile_definitions(PRINTER=1)
+  add_compile_definitions(PRINTER=2)
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
