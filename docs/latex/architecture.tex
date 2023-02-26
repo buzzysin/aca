@@ -7,10 +7,12 @@
 \usepackage{hyperref}
 \usepackage[landscape,left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
 \usepackage{multicol}
+\usepackage{parskip}
+\usepackage{hypcap}
 
 \graphicspath{{../}}
 
-\def\myArch{MyArch~}
+\def\myArch{TkArch~}
 
 \hypersetup{
   colorlinks=true,
@@ -18,14 +20,34 @@
   filecolor=magenta,      
   urlcolor=cyan,
 }
+\setlength{\columnsep}{30pt}
+% \setlength{\parskip}{0.1\baselineskip}
+
+\renewcommand{\familydefault}{\sfdefault}
+
 
 \makeatletter
 \newcommand{\enablecolumns}{
-  \begin{multicols}{2}
+  \begin{multicols*}{2}
 }
 \newcommand{\disablecolumns}{
-  \end{multicols}
+  \end{multicols*}
 }
+\makeatother
+
+\makeatletter
+\newenvironment{tablehere}
+  {\def\@captype{table}}
+  {}
+
+\newenvironment{figurehere}
+  {\def\@captype{figure}}
+  {}
+\makeatother
+
+\newenvironment{verbatimhere}
+  {\def\@captype{verbatim}}
+  {}
 \makeatother
 
 \title{\myArch -- A Simulator for a RISC-y Architecture}
@@ -36,74 +58,255 @@
 \begin{titlepage}
   \centering
 
-  \makeatletter
+  \vspace*{\fill}
 
-  \vfill
+  \includegraphics[height=4cm]{graphics/logo-uob.png}
 
-  \includegraphics[height=2cm]{graphics/logo-uob.png}
-
-  \vspace*{2cm}
+  \vspace*{20pt}
 
   {\LARGE\textbf{COMSM0053 Advanced Computer Architecture}}
 
-  \vspace*{2cm}
+  \vspace*{20pt}
 
-  {\Large\textbf{\@title}}
+  {\Large
+    \makeatletter
+    \textbf{\@title}
+    \makeatother}
 
-  \vspace*{2cm}
+  \vspace*{20pt}
 
   {\large
-  
-  \begin{tabular}{lr}
-    Student Name & \textbf{\@author~(zp19374)} \\
-    Student ID & \textbf{1815919} \\
-  \end{tabular}
+    \makeatletter
+    \begin{tabular}{lr}
+      Student Name & \textbf{\@author~(zp19374)} \\
+      Student ID   & \textbf{1815919}            \\
+    \end{tabular}
+    \makeatother
+
   }
 
-  \vspace*{2cm}
+  \vspace*{\fill}
 
-  \vfill
-
-  \makeatother
 \end{titlepage}
 
 \enablecolumns
 
 \section{Introduction}
 
-\section{Architecture Features}
-\label{sec:Architecture Features}
+This architecture is a RISC-based architecture that is designed to be simple and yet flexible. Being a RISC-based architecture, a software oriented approach is taken, with the architecture being designed to be easy to implement in software. This will, in theory, make benchmarking and testing more simple to execute, as it is easy to determine what each instruction is doing. Heavy inspiration was taken from MIPS and ARM, being used as a basis for this architecture.
 
-\subsection{Addressing Modes}
-\label{subsec:Addressing Modes}
+\section{Architecture}
+\label{sec:Architecture}
 
-This architecture supports the following addressing modes:
+The architecture is separated into three distinct parts - the instruction set defining the hardware interface, the microarchitecture defining the hardware implementation, and the simulator defining the software interface.
+
+In version 0.0.1, the instruction set is very simple, consisting of only a few instructions in order to demonstrate the fetch-decode-execute cycle. It is non-scalar and non-pipelined, meaning that there is only one instruction in the pipeline at any one time. In future versions, the instruction set will be expanded to include more instructions, and the architecture will be expanded to include a scalar and pipelined implementation.
+
+\subsection{Instruction Set}
+\label{subsec:Instruction Set}
+
+The instruction set is defined as a table below. The instruction set is designed to be simple and flexible. Omitted from the table are the two extra fields that alter the behaviour of these instructions. These are the addressing mode, and the condition code.
+
+The addressing mode is used to determine how the address is calculated. In version 0.0.1, the addressing mode is always direct, meaning that the address is calculated as the value of the operand. In future versions, the addressing mode will be used to determine how the address is calculated, and will be used to implement indirect addressing.
+
+\begin{tablehere}
+  \centering
+  \begin{tabular}{@{}llllll@{}}
+    \toprule
+    \textbf{Instruction}      & \textbf{Opcode} & \textbf{Operands}                    & \textbf{Description}   & \textbf{Cycles} \\
+    \midrule
+    \texttt{HLT}              & 0x00            & None                                 & Stops the clock        & 1               \\
+    \midrule
+    \textbf{Retrieval}        &                 &                                      &                        &                 \\
+    \texttt{LDR}              & 0x01            & \texttt{Rd}, \texttt{X}              & Load from memory       & ?               \\
+    \textbf{Storage}          &                 &                                      &                        &                 \\
+    \texttt{STR}              & 0x02            & \texttt{Rd}, \texttt{X}              & Store to memory        & ?               \\
+    \texttt{MOV}              & 0x03            & \texttt{Rd}, \texttt{X}              & Move value to register & ?               \\
+    \midrule
+    \textbf{Arithmetic/Logic} &                 &                                      &                        &                 \\
+    \texttt{ADD}              & 0x03            & \texttt{Rd}, \texttt{Rs}, \texttt{X} & Add two registers      & ?               \\
+    \texttt{SUB}              & 0x04            & \texttt{Rd}, \texttt{Rs}, \texttt{X} & Subtract two registers & ?               \\
+    \texttt{AND}              & 0x05            & \texttt{Rd}, \texttt{Rs}, \texttt{X} & Bitwise AND            & ?               \\
+    \texttt{OR}               & 0x06            & \texttt{Rd}, \texttt{Rs}, \texttt{X} & Bitwise OR             & ?               \\
+    \texttt{NOT}              & 0x07            & \texttt{Rd}, \texttt{Rs}             & Bitwise NOT            & ?               \\
+    \midrule
+    \textbf{Control}          &                 &                                      &                        &                 \\
+    \texttt{CMP}              & 0x08            & \texttt{Rd}, \texttt{X}              & Compare and set status & ?               \\
+    \texttt{JMP}              & 0x09            & \texttt{Rd}                          & Jump to address        & ?               \\
+    \texttt{B}                & 0x0A            & \texttt{\#}                          & Branch to address      & ?               \\
+    \bottomrule
+  \end{tabular}
+  \caption{Instruction Set (v0.0.1)}
+  \label{tab:Instruction Set}
+\end{tablehere}
+
+In the Table~\ref{tab:Instruction Set}, the symbol \texttt{X} represents an operand that can be either an address to a register or an immediate value, and the symbol \texttt{\#} is always an immediate value.
+
+\subsection{Microarchitecture}
+\label{subsec:Microarchitecture}
+
+In version 0.0.1, the microarchitecture is very simple, consisting of only a few components in order to demonstrate the fetch-decode-execute cycle. It implements the load-store paradigm ubiquitous amongst RISC-based architectures. Components in the computation sequence are as follows:
+
 \begin{itemize}
-  \item [--] \texttt{reg} - Register addressing mode
-  \item [--] \texttt{imm} - Immediate addressing mode
+  \item[--] The \texttt{PC} register, which holds the address of the next instruction to be executed.
+  \item[--] The \texttt{IR} register, which holds the instruction currently being executed.
+  \item[--] The \texttt{MAR} register, which holds the address of the memory location currently being accessed.
+  \item[--] The \texttt{MBR} register, which holds the data currently being accessed from memory.
 \end{itemize}
 
-\section{Instruction Set}
-\label{sec:Instruction Set}
+The architecture has 8 general purpose registers, numbers from 0 to 7. These are used to store data, and are used as operands in instructions. In version 0.0.1, there are not any stack operations, and so `\texttt{PSH}' and  `\texttt{POP}' are left unimplemented. The architecture has a small 4-bit address bus to start with, allowing 16 addressable registers. Altogether, with 12 instructions (4 bits), 2 possible addressing modes and 8 general purpose registers (11 bits)\footnotemark, this gives a minimum instruction size of 15 bits, which will be rounded to 16 for consistency and convention.
 
-\subsection{Instruction Structure}
-\label{subsec:Instruction Structure}
+\footnotetext{The first operand is always a destination register, so the additional 1 bit for the addressing mode is not required. With a maximum of 3 operands, this yields a total of $2 \times (3 + 1) + 3 = 11$ bits.}
 
-\subsection{Arithmetic}
-\label{subsec:Arithmetic}
+\begin{tablehere}
+  \centering
+  \begin{tabular}{@{}llllll@{}}
+    \toprule
+    \textbf{Opcode} & \textbf{Op 1} & \textbf{Op 2 Type} & \textbf{Op 2} & \textbf{Op 3 Type} & \textbf{Op 3} \\
+    \midrule
+    \texttt{XXXX}   & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  \\
+    \bottomrule
+  \end{tabular}
+  \label{tab:Instruction format as a result of microarchitecture}
+  \caption{Instruction format as a result of microarchitecture}
+\end{tablehere}
 
-\subsubsection{\texttt{add}}
-\label{subsubsec:add}
+\subsubsection{Fetch}
+\label{subsubsec:Fetch}
 
-\subsubsection{\texttt{sub}}
-\label{subsubsec:sub}
+The fetch stage is responsible for fetching the next instruction from memory. It is responsible for incrementing the \texttt{PC} register, and for loading the \texttt{IR} register with the instruction at the address stored in the \texttt{PC} register. This happens in the following sequence:
 
-\subsubsection{\texttt{mul}}
-\label{subsubsec:mul}
+\begin{figurehere}
+  \centering
+  $$
+    \begin{array}{ll}
+      \texttt{MAR} & \gets \texttt{PC}                   \\
+      \texttt{MBR} & \gets \texttt{Memory}[\texttt{MAR}] \\
+      \texttt{IR}  & \gets \texttt{MBR}                  \\
+      \texttt{PC}  & \gets \texttt{PC} + 1               \\
+    \end{array}
+  $$
+  \caption{Fetch}
+  \label{fig:Fetch}
+\end{figurehere}
 
-\subsubsection{\texttt{div}}
-\label{subsubsec:div}
+\subsubsection{Decode}
+\label{subsubsec:Decode}
+
+The decode stage is responsible for decoding the instruction currently in the \texttt{IR} register. This is as simple as reading the most significant bits of the instruction, and using them to determine which instruction is being executed. In simulation, this is represented by a switch statement, but may actually cost more cycles in hardware.
+
+\subsubsection{Execute}
+\label{subsubsec:Execute}
+
+The execute stage is responsible for executing the instruction currently in the \texttt{IR} register. This is as simple as reading the least significant bits of the instruction, and using them to determine which operation is being executed.
+
+In version 0.0.1, the execute state is not yet complete.
+
+
+\section{Simulator}
+\label{sec:Simulator}
+
+The simulator is a binary executable written in C++. It is focused on providing an in-depth view into individual components of the architecture, and is designed to be used in conjunction with a debugger.
+
+The program is built using the CMake build tool, using the Ninja Generator (although Unix Makefiles may also be used). To build the simulator, either run the provided \texttt{build.sh} script, or run the following commands:
+
+{\vbox{\small\begin{verbatim}
+$ # This will contain the src, include, CMakeLists.txt, etc.
+$ cd aca 
+$ # Setting CONFIG will affect performance of the simulator.
+$ # `Release' is recommended for performance, `Debug' for 
+$ # debugging.
+$ cmake . \
+  --build build \
+  --config <CONFIG> \
+  -G Ninja \
+  --target Simulator
+$ # The simulator will be located in the bin directory.
+$ cd bin ; ./Simulator
+\end{verbatim}}}
+
+\subsection{Usage}
+\label{subsubsec:Usage}
+
+The simulator is intended to be run as follows:
+
+{\vbox{\begin{verbatim}
+$ ./simulator [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -i, --interactive     Run in interactive mode
+  -f FILE, --file=FILE  Load program from file
+\end{verbatim}}}
+
+In interactive mode, the simulator will prompt the user for input, and will execute the program step-by-step. In non-interactive mode, the simulator will execute the program until it halts.
+
+If a file is not provided, the simulator will load a default program (TODO).
+
+\subsection{Benchmarks}
+\label{subsec:Benchmarks}
+
+\paragraph{Sum}
+\label{subsubsec:Sum}
+
+This is a test benchmark to demonstrate fetching, decoding, executing and storing data. It adds the numbers 1 to 10, and stores the result in register 0.
+
+\begin{figurehere}
+  \centering
+  \vbox{
+    \begin{verbatim}
+; Sum
+; MOV R0, #0   ; R0 will hold the result
+; MOV R1, #0   ; R1 will be added to R0
+; Loop
+CMP R1, #10    ; Compare R1 to 10
+BEQ END        ; Branch to the end of the program if R1 > 10
+ADD R1, R1, #1 ; Increment R1
+ADD R0, R0, R1 ; Add R1 to R0
+JMP LOOP       ; Jump back to the start of the loop
+; End
+HALT           ; Halt the program
+;
+; The end result should be R0 = 55, R1 = 11
+  \end{verbatim}}
+\end{figurehere}
+
+
+\paragraph{Vector Sum}
+\label{subsec:Vector Sum}
+
+TBD.
+
+\begin{figurehere}
+  \centering
+  \begin{verbatim}
+; Vector Sum
+; TBD
+  \end{verbatim}
+\end{figurehere}
 
 \disablecolumns
+
+\appendix
+
+\section{Appendix}
+\label{sec:Appendix}
+
+\subsection{Changelog}
+\label{subsec:Changelog}
+
+\begin{tablehere}
+  \centering
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Version} & \textbf{Date} & \textbf{Description}                 \\
+    \midrule
+    v0.0.1           & 20/02/2023    & {--} Fetch-Decode Implemented        \\
+                     &               & {--} Simple instruction set designed \\
+    \bottomrule
+  \end{tabular}
+  \caption{Changelog}
+  \label{tab:Changelog}
+\end{tablehere}
 
 \end{document}

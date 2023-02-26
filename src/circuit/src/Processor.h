@@ -108,6 +108,8 @@ protected:
     watch(ir.out_data, out_ir_buf, cu.out_ir);
     // Write the IR output buffer to program counter
     watch(out_ir_buf, pc.count.in_data, cu.out_ir);
+    // Write the IR output buffer to control unit
+    watch(out_ir_buf, cu.in_ir_decode, cu.out_ir);
 
     // watch(mem.out_data, );
   }

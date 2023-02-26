@@ -3,6 +3,11 @@
     // "${default}",
     "${workspaceFolder}/include",
   ],
+  "[latex]": {
+    "editor.formatOnPaste": false,
+    "editor.suggestSelection": "recentlyUsedByPrefix",
+    "editor.wordWrap": "on"
+  },
   "files.associations": {
     "*.svg": "svg",
     "Procfile": "yaml",
