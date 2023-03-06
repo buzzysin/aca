@@ -10,9 +10,13 @@
 \usepackage{parskip}
 \usepackage{hypcap}
 
-\graphicspath{{../}}
+%%%%%%%%%%%%%%%%%
+% Setup & Custom defines
+%%%%%%%%%%%%%%%%%
 
 \def\myArch{TkArch~}
+
+\graphicspath{{../}}
 
 \hypersetup{
   colorlinks=true,
@@ -20,12 +24,21 @@
   filecolor=magenta,      
   urlcolor=cyan,
 }
+
 \setlength{\columnsep}{30pt}
+
 % \setlength{\parskip}{0.1\baselineskip}
 
+\title{\myArch -- A Simulator for a RISC-y Architecture}
+
+\author{Taharka Okai}
+
+\date{\today}
+
+%%%%%%%%%%%%%%%%%
+% Custom commands
+%%%%%%%%%%%%%%%%%
 \renewcommand{\familydefault}{\sfdefault}
-
-
 \makeatletter
 \newcommand{\enablecolumns}{
   \begin{multicols*}{2}
@@ -50,8 +63,6 @@
   {}
 \makeatother
 
-\title{\myArch -- A Simulator for a RISC-y Architecture}
-\author{Taharka Okai}
 
 \begin{document}
 
@@ -71,6 +82,13 @@
   {\Large
     \makeatletter
     \textbf{\@title}
+    \makeatother}
+
+  \vspace*{20pt}
+
+  {\Large
+    \makeatletter
+    \textbf{\@date}
     \makeatother}
 
   \vspace*{20pt}
@@ -132,7 +150,7 @@ The addressing mode is used to determine how the address is calculated. In versi
     \midrule
     \textbf{Control}          &                 &                                      &                        &                 \\
     \texttt{CMP}              & 0x08            & \texttt{Rd}, \texttt{X}              & Compare and set status & ?               \\
-    \texttt{JMP}              & 0x09            & \texttt{Rd}                          & Jump to address        & ?               \\
+    \texttt{JMP}              & 0x09            & \texttt{\#}                          & Jump to address        & ?               \\
     \texttt{B}                & 0x0A            & \texttt{\#}                          & Branch to address      & ?               \\
     \bottomrule
   \end{tabular}
@@ -164,7 +182,7 @@ The architecture has 8 general purpose registers, numbers from 0 to 7. These are
     \toprule
     \textbf{Opcode} & \textbf{Op 1} & \textbf{Op 2 Type} & \textbf{Op 2} & \textbf{Op 3 Type} & \textbf{Op 3} \\
     \midrule
-    \texttt{XXXX}   & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  \\
+    \texttt{0XXXX}  & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  & \texttt{X}         & \texttt{XXX}  \\
     \bottomrule
   \end{tabular}
   \label{tab:Instruction format as a result of microarchitecture}
@@ -222,7 +240,7 @@ $ cmake . \
   -G Ninja \
   --target Simulator
 $ # The simulator will be located in the bin directory.
-$ cd bin ; ./Simulator
+$ cd bin ; ./simulator
 \end{verbatim}}}
 
 \subsection{Usage}

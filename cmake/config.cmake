@@ -80,7 +80,7 @@ if (MODULE_NAME)
     message(STATUS "config.cmake :: ${MODULE_NAME} :: Configuring application module ${MODULE_NAME} sources")
     
     foreach(APP ${MODULE_APPS})
-      capitalise(APP_NAME ${APP})
+      set(APP_NAME ${APP})
       message(STATUS "config.cmake :: ${MODULE_NAME} :: Configuring application ${APP_NAME}")
       add_executable(${APP_NAME} ${MODULE_APP}/${APP}/main.cpp)
       target_link_libraries(${APP_NAME} ${MODULE_NAME})

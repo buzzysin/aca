@@ -16,7 +16,7 @@
 
 namespace isa {
   typedef std::uint8_t addr_t;
-  typedef std::uint8_t data_t;
+  typedef std::size_t data_t;
   struct logic_t {
     int value;
     static const logic_t LOGIC_LOW, LOGIC_HIGH, LOGIC_Z;

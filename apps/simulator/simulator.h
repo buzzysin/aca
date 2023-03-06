@@ -5,7 +5,10 @@
 #include <iostream>
 #include <string>
 
+#include <cassert>
+
 #include <TkArch/Core.h>
+
 namespace sim {
   static const std::string VERSION = "0.0.1";
 
@@ -92,9 +95,21 @@ namespace sim {
 
     processor processor;
 
-    unsigned int seed;
-    for (unsigned int i = 0; i < processor.mem.size; i++) {
-      processor.mem.write(i, rand_r(&seed) % 256);
+    for (unsigned int i = 0; i < isa::prog_example.size(); i++) {
+      auto inst                 = isa::prog_example[i];
+      unsigned int inst_as_uint = inst.to_uint();
+      processor.mem.write(i, inst_as_uint);
+
+      auto convert = isa::instruction(inst_as_uint);
+
+      assert(inst.to_uint() == convert.to_uint());
+
+      // clang-format off
+      print_debug("Writing instruction      : " + inst.to_string());
+      print_debug("                         : " + inst.to_bin_string());
+      print_debug("Instruction after convert: " + convert.to_string());
+      print_debug("                         : " + convert.to_bin_string());
+      // clang-format on
     }
 
     while (true) {

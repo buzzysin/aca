@@ -35,8 +35,8 @@ public:
 protected:
   state_t _state = INIT;
 
-  instruction_unit _iu;
-  execution_unit _eu;
+  instruction_unit iu;
+  execution_unit eu;
 
 public:
   sp<signal<isa::logic_t>> out_pc;
@@ -107,37 +107,37 @@ public:
   }
 
   void setup_instruction_unit() {
-    watch(in_clock, _iu.in_clock);
-    watch(in_ir_decode, _iu.in_ir_decode);
+    watch(in_clock, iu.in_clock);
+    watch(in_ir_decode, iu.in_ir_decode);
 
-    watch(_iu.out_pc, out_pc);
-    watch(_iu.out_pc_clk, out_pc_clk);
-    watch(_iu.out_pc_inc, out_pc_inc);
+    watch(iu.out_pc, out_pc);
+    watch(iu.out_pc_clk, out_pc_clk);
+    watch(iu.out_pc_inc, out_pc_inc);
 
-    watch(_iu.out_mar, out_mar);
-    watch(_iu.out_mar_clk, out_mar_clk);
-    watch(_iu.out_mar_load, out_mar_load);
+    watch(iu.out_mar, out_mar);
+    watch(iu.out_mar_clk, out_mar_clk);
+    watch(iu.out_mar_load, out_mar_load);
 
-    watch(_iu.out_mem, out_mem);
-    watch(_iu.out_mem_clk, out_mem_clk);
-    watch(_iu.out_mem_load, out_mem_load);
+    watch(iu.out_mem, out_mem);
+    watch(iu.out_mem_clk, out_mem_clk);
+    watch(iu.out_mem_load, out_mem_load);
 
-    watch(_iu.out_mbr, out_mbr);
-    watch(_iu.out_mbr_clk, out_mbr_clk);
-    watch(_iu.out_mbr_load, out_mbr_load);
+    watch(iu.out_mbr, out_mbr);
+    watch(iu.out_mbr_clk, out_mbr_clk);
+    watch(iu.out_mbr_load, out_mbr_load);
 
-    watch(_iu.out_ir, out_ir);
-    watch(_iu.out_ir_clk, out_ir_clk);
-    watch(_iu.out_ir_load, out_ir_load);
+    watch(iu.out_ir, out_ir);
+    watch(iu.out_ir_clk, out_ir_clk);
+    watch(iu.out_ir_load, out_ir_load);
 
-    watch(_iu.out_halt, out_halt);
+    watch(iu.out_halt, out_halt);
   }
 
   void setup_execution_unit() {}
 
   state_t next_state(state_t state) {
-    isa::logic_t fetch_done   = _iu.out_done->value();
-    isa::logic_t execute_done = _eu.out_done->value();
+    isa::logic_t fetch_done   = iu.out_done->value();
+    isa::logic_t execute_done = eu.out_done->value();
 
     switch (state) {
     case INIT:
@@ -171,30 +171,30 @@ public:
   void next_outputs(state_t state) {
     switch (state) {
     case INIT:
-      _iu.in_fetch->next(isa::LOGIC_LOW);
-      _eu.in_execute->next(isa::LOGIC_LOW);
+      iu.in_fetch->next(isa::LOGIC_LOW);
+      eu.in_execute->next(isa::LOGIC_LOW);
       break;
 
     case FETCH:
-      _iu.in_fetch->next(isa::LOGIC_HIGH);
+      iu.in_fetch->next(isa::LOGIC_HIGH);
       break;
 
     case DECODE:
-      _iu.in_fetch->next(isa::LOGIC_LOW);
+      iu.in_fetch->next(isa::LOGIC_LOW);
       break;
 
     case EXECUTE:
-      _eu.in_execute->next(isa::LOGIC_HIGH);
+      eu.in_execute->next(isa::LOGIC_HIGH);
       break;
 
     case HALT:
-      _iu.in_fetch->next(isa::LOGIC_LOW);
-      _eu.in_execute->next(isa::LOGIC_LOW);
+      iu.in_fetch->next(isa::LOGIC_LOW);
+      eu.in_execute->next(isa::LOGIC_LOW);
       break;
 
     default:
-      _iu.in_fetch->next(isa::LOGIC_LOW);
-      _eu.in_execute->next(isa::LOGIC_LOW);
+      iu.in_fetch->next(isa::LOGIC_LOW);
+      eu.in_execute->next(isa::LOGIC_LOW);
       break;
     }
   }
